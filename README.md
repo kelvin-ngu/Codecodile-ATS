@@ -31,3 +31,8 @@ We proudly present to you the **Codecodile Applicant Tracking System**, which st
 For more information, please refer to our pitch deck! 
 
 You can find the `Codecodile Pitch Desk.pdf` file in the same directory.
+## Before Accessing the Codecodile Applicant Tracking System, Please Do the Following:
+1. Get the Google Cloud API Key and allow the Google Gemini API and Google Speech to Text API.
+2. Go to Settings of all the three AppScripts and edit the script property.
+3. Name the property as GOOGLE_API_KEY and put your API Key at the Value textbox.
+   
