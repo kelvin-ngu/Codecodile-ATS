@@ -30,4 +30,4 @@ We proudly present to you the **Codecodile Applicant Tracking System**, which st
 
 For more information, please refer to our pitch deck! 
 
-You can find the `Codecodile Pitch Desk` file in the same directory.
+You can find the `Codecodile Pitch Desk.pdf` file in the same directory.
