@@ -35,4 +35,6 @@ You can find the `Codecodile Pitch Desk.pdf` file in the same directory.
 1. Get the Google Cloud API Key and allow the Google Gemini API and Google Speech to Text API.
 2. Go to Settings of all the three AppScripts and edit the script property.
 3. Name the property as GOOGLE_API_KEY and put your API Key at the Value textbox.
-   
+4. Please request for a permission to access and edit the Google Drive before accessing our solution.
+   Google Drive Link: https://drive.google.com/drive/folders/15gzBWEfIlmju2Y921Y_GvMJqHoJVjCt1?usp=drive_link (View only)
+ 
