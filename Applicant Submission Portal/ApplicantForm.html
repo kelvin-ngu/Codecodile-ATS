@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <!-- Include Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #d4edda; /* Light green background */
+            font-family: 'Arial', sans-serif;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        .form-container {
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        #snackbar {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            color: #fff;
+            text-align: center;
+            border-radius: 2px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            bottom: 30px;
+            font-size: 17px;
+        }
+        .error {
+            background-color: #f44336; /* Red */
+        }
+        .success {
+            background-color: #4CAF50; /* Green */
+        }
+        #snackbar.show {
+            visibility: visible;
+            -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+        @-webkit-keyframes fadein {
+            from {bottom: 0; opacity: 0;} 
+            to {bottom: 30px; opacity: 1;}
+        }
+        @keyframes fadein {
+            from {bottom: 0; opacity: 0;}
+            to {bottom: 30px; opacity: 1;}
+        }
+        @-webkit-keyframes fadeout {
+            from {bottom: 30px; opacity: 1;} 
+            to {bottom: 0; opacity: 0;}
+        }
+        @keyframes fadeout {
+            from {bottom: 30px; opacity: 1;}
+            to {bottom: 0; opacity: 0;}
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            display: none; /* Hidden by default */
+        }
+        .thank-you-message {
+            display: none;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .thank-you-message img {
+            max-width: 100px;
+            margin-bottom: 20px;
+        }
+    </style>
+    <script>
+        function submitForm() {
+            var submitButton = document.getElementById('submit-button');
+            var file = document.getElementById('cv-upload').files[0];
+
+            submitButton.disabled = true; // disable the submit button to prevent multiple submission
+
+            if (!file) {
+                showSnackbar("Please select a PDF file to upload.", "error");
+                submitButton.disabled = false; // re-enable the submit button
+            } else {
+                showLoading();
+                checkPDFFileAndSave(file, submitButton);
+            }
+        }
+
+        function checkPDFFileAndSave(file, submitButton) {
+            var positionSelect = document.getElementById('position-select');
+            var selectedPosition = positionSelect.value;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                // Get the binary data as a string
+                const pdfContent = e.target.result;
+                google.script.run.withSuccessHandler(function(response) {
+                    hideLoading();
+                    if(response === "OK") {
+                        showThankYouMessage();
+                        submitButton.disabled = false;
+                        showSnackbar("Upload successful.", "success");
+                        saveData(pdfContent, file.name, selectedPosition);
+                    } else {
+                        showSnackbar(response, "error");
+                    }
+                }).checkPDFPageCount(pdfContent);
+              };
+            reader.readAsDataURL(file);
+        }
+
+        function saveData(pdfContent, fileName, selectedPosition) {
+            google.script.run.withSuccessHandler(function(response) {
+                if(response != "OK") {
+                    showSnackbar(response, "error");
+                }
+            }).uploadToDrive(pdfContent, fileName, selectedPosition);
+        }
+
+        function showSnackbar(message, type) {
+            var snackbar = document.getElementById("snackbar");
+            snackbar.className = "show " + (type === "success" ? "success" : "error");
+            snackbar.textContent = message;
+            setTimeout(function() { snackbar.className = snackbar.className.replace("show", ""); }, 3000);
+        }
+
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+
+        function showThankYouMessage() {
+            document.getElementById('upload-form').style.display = 'none';
+            document.querySelector('.thank-you-message').style.display = 'block';
+        }
+
+        function populatePositionDropdown(positions) {
+            var select = document.getElementById('position-select');
+            select.innerHTML = ''; // Clear existing options
+
+            positions.forEach(function(position) {
+              var option = document.createElement('option');
+              option.value = position;
+              option.text = position;
+              select.appendChild(option);
+            });
+        }
+
+        function fetchPositions() {
+            google.script.run.withSuccessHandler(populatePositionDropdown).getPositions();
+        }
+
+        window.onload = fetchPositions;
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="form-container">
+            <form id="upload-form">
+                <div class="form-group">
+                    <label for="position-select">Select Position:</label>
+                    <select id="position-select" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label for="cv-upload">Upload CV (PDF only):</label>
+                    <input type="file" id="cv-upload" accept="application/pdf" class="form-control-file">
+                </div>
+                <button type="button" id="submit-button" class="btn btn-primary" onclick="submitForm()">Submit</button>
+            </form>
+            <div id="snackbar"></div>
+        </div>
+        <div class="thank-you-message">
+            <img src="https://i.ebayimg.com/images/g/YOsAAOSwHv1eD1Nn/s-l960.webp" alt="Thank you">
+            <h3>Thank you for your response. Our HR team will get back to you later.</h3>
+        </div>
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

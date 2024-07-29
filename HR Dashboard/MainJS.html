@@ -1,0 +1,668 @@
+<script>
+  let originalApplicants = [];
+  let filteredApplicants = [];
+  let filterOptions = [];
+
+  function fetchApplicants(callback) {
+      google.script.run.withSuccessHandler(displayApplicants).getApplicants();
+      setTimeout(function() {
+          callback();
+      }, 2000);
+  }
+
+  function displayApplicants(fetchedApplicants) {
+      originalApplicants = fetchedApplicants;
+      filteredApplicants = fetchedApplicants;
+      renderApplicants(filteredApplicants);
+  }
+
+  function renderApplicants(applicants) {
+    const applicantList = document.getElementById('applicant-list');
+    applicantList.innerHTML = '';
+    applicants.forEach(applicant => {
+      const row = document.createElement('tr');
+      const nameCell = document.createElement('td');
+      const positionCell = document.createElement('td');
+      const educationCell = document.createElement('td');
+      const skillsCell = document.createElement('td');
+      const cvCell = document.createElement('td');
+      const decisionCell = document.createElement('td');
+
+      nameCell.textContent = applicant.name;
+      positionCell.textContent = applicant.position; // Set the position text
+
+      row.appendChild(nameCell);
+      row.appendChild(positionCell); // Append the position cell
+
+      // Create a list to display education details in point form
+      const educationList = document.createElement('ul');
+      const universityItem = document.createElement('li');
+      universityItem.textContent = `University: ${applicant.education[0]}`;
+      const courseItem = document.createElement('li');
+      courseItem.textContent = `Course: ${applicant.education[1]}`;
+      const startYearItem = document.createElement('li');
+      startYearItem.textContent = `Start Year: ${applicant.education[2]}`;
+
+      educationList.appendChild(universityItem);
+      educationList.appendChild(courseItem);
+      educationList.appendChild(startYearItem);
+      educationCell.appendChild(educationList);
+      row.appendChild(educationCell);
+      console.log(applicant.skills);
+      skillsCell.textContent = (applicant.skills)? JSON.parse(applicant.skills).skills.join(', '): "";
+      row.appendChild(skillsCell);
+
+      // Create a button to download CV
+      const cvButton = document.createElement('a');
+      cvButton.href = applicant.cv; // URL to CV PDF
+      cvButton.textContent = 'View CV';
+      cvButton.className = 'cv-button';
+      cvButton.target = '_blank'; // Open in a new tab
+      cvCell.appendChild(cvButton);
+      row.appendChild(cvCell); // Append the CV button cell
+
+      // Create "Reject" button
+      const rejectButton = document.createElement('button');
+      rejectButton.textContent = 'Reject';
+      rejectButton.className = 'decision-button reject';
+
+      // Create "Proceed to Next Stage" button
+      const proceedButton = document.createElement('button');
+      proceedButton.textContent = 'Proceed to Next Stage';
+      proceedButton.className = 'decision-button proceed';
+      proceedButton.addEventListener('click', () => {
+          handleDecision(applicant, 'proceeded to the next stage').then(() => {
+              // Hide the button and show the text in a green container
+              proceedButton.style.display = 'none';
+              rejectButton.style.display = 'none'
+              const proceedText = document.createElement('div');
+              proceedText.textContent = 'Proceeded to Next Stage';
+              proceedText.style.backgroundColor = '#90EE90';
+              proceedText.style.color = 'white';
+              proceedText.style.padding = '2px 5px'; // Smaller padding
+              proceedText.style.borderRadius = '3px';
+              proceedText.style.fontSize = '12px'; // Smaller font size
+              decisionCell.appendChild(proceedText);
+
+          });
+      });
+      decisionCell.appendChild(proceedButton);
+
+      rejectButton.addEventListener('click', () => {
+        handleDecision(applicant, 'rejected').then(() => {
+            // Hide the button and show the text in a green container
+            proceedButton.style.display = 'none';
+            rejectButton.style.display = 'none'
+            const rejectText = document.createElement('div');
+            rejectText.textContent = 'Rejected';
+            rejectText.style.backgroundColor = '#FFCCCB';
+            rejectText.style.color = 'white';
+            rejectText.style.padding = '2px 5px'; // Smaller padding
+            rejectText.style.borderRadius = '3px';
+            rejectText.style.fontSize = '12px'; // Smaller font size
+            decisionCell.appendChild(rejectText);
+        });
+    });
+      decisionCell.appendChild(rejectButton);
+      row.appendChild(decisionCell);
+
+      applicantList.appendChild(row);
+    });
+  }
+
+  function fetchAvailablePosition() {
+    google.script.run.withSuccessHandler(renderAvailablePosition).getAvailablePosition();
+  }
+
+  function renderAvailablePosition(availablePosition) {
+    filterOptions = availablePosition;
+    const availablePositionList = document.getElementById('availablePosition');
+    availablePositionList.innerHTML = ''; // Clear existing options
+
+    availablePosition.forEach(position => {
+        if (position.availability === 'Open') {
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'filter-checkbox';
+            checkbox.setAttribute('data-filter', 'position');
+            checkbox.value = position.position;
+
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(position.position));
+            availablePositionList.appendChild(label);
+
+            // Attach event listener to update skills filter based on position selection
+            checkbox.addEventListener('change', updateSkillsFilter);
+        }
+    });
+
+    // Re-attach event listeners to the new checkboxes
+    document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', filterApplicants);
+    });
+  }
+
+  function updateSkillsFilter() {
+    const selectedPositions = Array.from(document.querySelectorAll('.filter-checkbox[data-filter="position"]:checked'))
+                                  .map(checkbox => checkbox.value);
+    const skillsFilter = document.getElementById('position-skill-list');
+    skillsFilter.innerHTML = ''; // Clear existing options
+
+    let skillsSet = new Set();
+
+    selectedPositions.forEach(position => {
+        const positionData = filterOptions.find(opt => opt.position === position);
+        if (positionData) {
+            positionData.skills.forEach(skill => skillsSet.add(skill));
+        }
+    });
+
+    skillsSet.forEach(skill => {
+        const label = document.createElement('label');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'filter-checkbox';
+        checkbox.setAttribute('data-filter', 'skills');
+        checkbox.value = skill.trim();
+
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(skill.trim()));
+        skillsFilter.appendChild(label);
+    });
+
+    // Re-attach event listeners to the new checkboxes
+    document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', filterApplicants);
+    });
+  }
+
+
+  function filterApplicants() {
+    const selectedFilters = {
+        position: [],
+        startYear: [],
+        skills: []
+    };
+
+    document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+        if (checkbox.checked) {
+            const filterType = checkbox.getAttribute('data-filter');
+            const filterValue = checkbox.value.trim().toLowerCase();
+            selectedFilters[filterType].push(filterValue);
+        }
+    });
+
+    filteredApplicants = originalApplicants.filter(applicant => {
+        const statusMatch = applicant.status === 'Review in Progress';
+        const startYearMatch = selectedFilters.startYear.length === 0 || selectedFilters.startYear.includes(applicant.education[2].toString());
+        console.log(`StartYearMatch: ${startYearMatch}`);
+        console.log(`StartYear: ${applicant.education[2].toString()}`);
+        const skillsArray = (applicant.skills)? JSON.parse(applicant.skills).skills.map(skill => skill.trim().toLowerCase()) : [];
+        const skillsMatch = selectedFilters.skills.length === 0 || selectedFilters.skills.every(skill => skillsArray.includes(skill));
+        const positionMatch = selectedFilters.position.length === 0 || selectedFilters.position.includes(applicant.position.trim().toLowerCase());
+        return statusMatch && startYearMatch && skillsMatch && positionMatch;
+    });
+    renderApplicants(filteredApplicants);
+  }
+
+  function filterApplicantsBySynonym() {
+      const selectedFilters = {
+          position: [],
+          startYear: [],
+          skills: []
+      };
+
+      document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+          if (checkbox.checked) {
+              const filterType = checkbox.getAttribute('data-filter');
+              const filterValue = checkbox.value.trim().toLowerCase();
+              selectedFilters[filterType].push(filterValue);
+          }
+      });
+
+      let applicantsToProcess = originalApplicants.length;
+      const filteredApplicants = [];
+
+      originalApplicants.forEach(applicant => {
+          const statusMatch = applicant.status === 'Review in Progress';
+          const startYearMatch = selectedFilters.startYear.length === 0 || selectedFilters.startYear.includes(applicant.education[2].toString());
+          const positionMatch = selectedFilters.position.length === 0 || selectedFilters.position.includes(applicant.position.trim().toLowerCase());
+
+          if (statusMatch && startYearMatch && positionMatch) {
+              if (selectedFilters.skills.length !== 0) {
+                  google.script.run.withSuccessHandler(content => {
+                      const prompt = `The job skills needed for the job are ${selectedFilters.skills}. 
+                      The resume text:\n\n${content}. 
+                      Search from the applicant's Resume to see whether the applicant showcases any skill equivalent to ${selectedFilters.skills} 
+                      in their experience, projects or academic. For instance, critical thinking and problem solving should be equivalent.
+                      Please return Yes if a compatible skill is found in the resume, otherwise return No. 
+                      The response must be only a dictionary. Do not return me any text. i.e. 
+                      The job skills ["Creativity", "Problem-Solving", "Django"] 
+                      { "Creativity": "Yes", "Problem-Solving": "Yes", "Django": "No" }`;
+
+                      google.script.run.withSuccessHandler(output => {
+                          let skillsMatch = true;
+                          var skills_dic = JSON.parse(output.replace(/```(?:json|)/g, ""));
+                          
+                          for (const key in skills_dic) {
+                            console.log(key, skills_dic[key]);
+                              if (skills_dic[key] === "No") {
+                                  skillsMatch = false;
+                                  break;
+                              }
+                          }
+                          // console.log(skills_dic)
+                          // console.log('skillsMatch:');
+                          // console.log(skillsMatch);
+
+                          if (skillsMatch) {
+                              filteredApplicants.push(applicant);
+                          }
+                          
+                          applicantsToProcess--;
+                          if (applicantsToProcess === 0) {
+                              renderApplicants(filteredApplicants);
+                          }
+                      })
+                      .callGemini(prompt);
+                  })
+                  .readGoogleDocsFileByURL(applicant.docs);
+              } else {
+                  filteredApplicants.push(applicant);
+                  applicantsToProcess--;
+                  if (applicantsToProcess === 0) {
+                      renderApplicants(filteredApplicants);
+                  }
+              }
+          } else {
+              applicantsToProcess--;
+              if (applicantsToProcess === 0) {
+                  renderApplicants(filteredApplicants);
+              }
+          }
+      });
+  }
+
+
+  function handleDecision(applicant, decision) {
+    if (decision == 'proceeded to the next stage') {
+        google.script.run.next_stage_button(applicant.id);
+    } else if (decision == 'rejected') {
+        google.script.run.send_unsuccessful_email(applicant.id);
+    }
+    return Promise.resolve();
+}
+
+
+  function handlefinalDecision(applicant, decision) {
+    if (decision == 'proceeded to the next stage') {
+        google.script.run.send_successful_email(applicant.id);
+    } else if (decision == 'rejected') {
+        google.script.run.send_unsuccessful_email(applicant.id);
+    }
+    return Promise.resolve();
+}
+
+
+  function fetchApplicantsByStatus(callback) {
+    google.script.run.withSuccessHandler(displayApplicantsByStatus).getApplicantsByStatus();
+    setTimeout(function() {
+          callback();
+      }, 2000);
+  }
+  
+  function displayApplicantsByStatus(fetchedApplicants) {
+    originalApplicants = fetchedApplicants;
+    filteredApplicants = fetchedApplicants;
+    renderApplicantsByStatus(fetchedApplicants);
+
+    document.querySelectorAll('.status-filter-checkbox').forEach(checkbox => {
+      checkbox.addEventListener('change', filterApplicantsByStatus);
+    });
+  }
+
+  function renderApplicantsByStatus(applicants) {
+    const applicantList = document.getElementById('applicant-list-by-status');
+    applicantList.innerHTML = '';
+    applicants.forEach(applicant => {
+      const row = document.createElement('tr');
+      const idCell = document.createElement('td');
+      const nameCell = document.createElement('td');
+      const positionCell = document.createElement('td');
+      const cvCell = document.createElement('td');
+      const statusCell = document.createElement('td');
+
+      idCell.textContent = applicant.id;
+      row.appendChild(idCell);
+
+      nameCell.textContent = applicant.name;
+      positionCell.textContent = applicant.position; // Set the position text
+
+      row.appendChild(nameCell);
+      row.appendChild(positionCell); // Append the position cell
+
+      // Create a button to download CV
+      const cvButton = document.createElement('a');
+      cvButton.href = applicant.cv; // URL to CV PDF
+      cvButton.textContent = 'View CV';
+      cvButton.className = 'cv-button';
+      cvButton.target = '_blank'; // Open in a new tab
+      cvCell.appendChild(cvButton);
+      row.appendChild(cvCell); // Append the CV button cell
+
+      statusCell.textContent = applicant.status;
+      row.appendChild(statusCell);
+
+      applicantList.appendChild(row);
+    });
+  }
+
+  function filterApplicantsByStatus() {
+    var selectedFilters = [];
+
+    document.querySelectorAll('.status-filter-checkbox').forEach(checkbox => {
+        if (checkbox.checked) {
+            const filterValue = checkbox.value.trim().toLowerCase();
+            selectedFilters.push(filterValue);
+        }
+    });
+
+    filteredApplicants = originalApplicants.filter(applicant => {
+        return selectedFilters.length == 0 || selectedFilters.includes(applicant.status.trim().toLowerCase());
+    });
+    renderApplicantsByStatus(filteredApplicants);
+  }
+
+  
+function renderfinalInterviewApplicants(applicants) {
+    const applicantList = document.getElementById('interview-applicant-list');
+    applicantList.innerHTML = '';
+    applicants.forEach(applicant => {
+      const row = document.createElement('tr');
+      const nameCell = document.createElement('td');
+      const positionCell = document.createElement('td');
+      const interview_statusCell = document.createElement('td');
+      const feedbackCell = document.createElement('td');
+      const decisionCell = document.createElement('td');
+      nameCell.textContent = applicant.name;
+      positionCell.textContent = applicant.position; // Set the position text
+
+      // Set status text
+      const statusText = document.createElement('p');
+      statusText.textContent = applicant.status;
+      statusText.id = 'statusText_' + applicant.id;
+      interview_statusCell.appendChild(statusText);
+      
+      // Conditionally add "Schedule an Interview" button
+      if (applicant.status === "Not Scheduled") {
+        const scheduleInterviewButton = document.createElement('a');
+        scheduleInterviewButton.textContent = 'Schedule an Interview';
+        scheduleInterviewButton.className = 'schedule_interview_Button';
+        scheduleInterviewButton.id = 'scheduleInterviewButton_' + applicant.id;
+        scheduleInterviewButton.target = '_blank'; // Open in a new tab
+        scheduleInterviewButton.addEventListener('click', () => fetchScheduleForm(applicant.email,applicant.id, applicant.feedback));
+        interview_statusCell.appendChild(scheduleInterviewButton);
+      }
+      row.appendChild(nameCell);
+      row.appendChild(positionCell); // Append the position cell
+      row.appendChild(interview_statusCell);
+      
+
+      // Create a button to download CV
+      const feedbackButton = document.createElement('a');
+      feedbackButton.href = applicant.feedback; 
+      feedbackButton.textContent = 'View Feedback';
+      feedbackButton.className = 'feedback-button';
+      feedbackButton.target = '_blank'; // Open in a new tab
+      feedbackCell.appendChild(feedbackButton);
+      row.appendChild(feedbackCell); 
+
+      // Create "Reject" button
+      const rejectButton = document.createElement('button');
+      rejectButton.textContent = 'Reject';
+      rejectButton.className = 'decision-button reject';
+
+      // Create "Proceed to Next Stage" button
+      const successfulButton = document.createElement('button');
+      successfulButton.textContent = 'Successful';
+      successfulButton.className = 'decision-button proceed';
+
+      successfulButton.addEventListener('click', () => {
+          handlefinalDecision(applicant, 'proceeded to the next stage').then(() => {
+              // Hide the button and show the text in a green container
+              successfulButton.style.display = 'none';
+              rejectButton.style.display = 'none'
+              const successfulText = document.createElement('div');
+              successfulText.textContent = 'Successful';
+              successfulText.style.backgroundColor = '#90EE90';
+              successfulText.style.color = 'white';
+              successfulText.style.padding = '2px 5px'; // Smaller padding
+              successfulText.style.borderRadius = '3px';
+              successfulText.style.fontSize = '12px'; // Smaller font size
+              decisionCell.appendChild(successfulText);
+          });
+      });
+      decisionCell.appendChild(successfulButton);
+
+      rejectButton.addEventListener('click', () => {
+        handlefinalDecision(applicant, 'rejected').then(() => {
+            // Hide the button and show the text in a green container
+            successfulButton.style.display = 'none';
+            rejectButton.style.display = 'none'
+            const rejectText = document.createElement('div');
+            rejectText.textContent = 'Rejected';
+            rejectText.style.backgroundColor = '#FFCCCB';
+            rejectText.style.color = 'white';
+            rejectText.style.padding = '2px 5px'; // Smaller padding
+            rejectText.style.borderRadius = '3px';
+            rejectText.style.fontSize = '12px'; // Smaller font size
+            decisionCell.appendChild(rejectText);
+        });
+    });
+      decisionCell.appendChild(rejectButton);
+      row.appendChild(decisionCell);
+
+      applicantList.appendChild(row);
+    });
+  }
+
+
+function fetchScheduleForm(applicant_email, applicant_id, feedback_form_link) {
+    const scheduleFormModal = document.getElementById('scheduleFormModal');
+    const scheduleForm = document.getElementById('scheduleForm');
+    const span = document.getElementsByClassName('close')[0];
+    var addEmailButton = document.getElementById("addEmailButton");
+    var emailList = document.getElementById("emailList");
+    var emailInput = document.getElementById("interviewerEmail");
+    var emails = [];
+
+    scheduleFormModal.style.display = 'block';
+    
+    // Store applicant information in data attributes or use global variables
+    var applicantEmail = applicant_email;
+    var recipients = [applicantEmail];
+
+    // When the user clicks on <span> (x), close the modal
+    span.onclick = function() {
+        scheduleFormModal.style.display = 'none';
+    };
+
+    addEmailButton.onclick = function() {
+    var email = emailInput.value.trim();
+    if (email) {
+      emails.push(email);
+      var li = document.createElement("li");
+      li.textContent = email;
+      emailList.appendChild(li);
+      emailInput.value = "";
+    }
+    }
+
+    // Handle button click event
+    const submitButton = document.getElementById('scheduleSubmitButton');
+    const scheduleInterviewButton = document.getElementById('scheduleInterviewButton_' + applicant_id);
+    const status = document.getElementById('statusText_' + applicant_id);
+    submitButton.addEventListener('click', function(event) {
+        event.preventDefault(); // Prevent default button behavior
+        var interviewerEmails = emails.join(", ");
+        // Get form values
+        const startTimeInput = document.getElementById('startTime').value;
+        const meetingDuration = document.getElementById('meetingDuration').value;       
+        const title = "Codecodile Final Interview";
+        // Parse start time and calculate end time
+        let startTime = new Date(startTimeInput);
+        let endTime = new Date(startTime.getTime() + meetingDuration * 60000);
+        let feedbackform = feedback_form_link;
+        // Convert dates to ISO strings
+        startTime = startTime.toISOString();
+        endTime = endTime.toISOString();
+
+        // Add interviewer emails to recipients
+        const additionalEmails = interviewerEmails.split(',').map(email => email.trim());
+        recipients = recipients.concat(additionalEmails);
+
+        // Call Google Apps Script function
+        google.script.run.setupMeeting(applicant_id, title, startTime, endTime, recipients,feedbackform);
+        scheduleFormModal.style.display = 'none';
+        scheduleInterviewButton.style.display = 'none';
+        status.textContent = "In Progress";
+        google.script.run.updateFinalApplicantDetails(applicant_id, startTime, endTime, recipients)
+
+        google.script.run.withSuccessHandler(function() 
+        {
+          scheduleFormModal.style.display = 'none';
+          scheduleInterviewButton.style.display = 'none';
+          status.textContent = "In Progress";
+          google.script.run.updateFinalApplicantDetails(applicant_id, startTime, recipients);
+        }).setupMeeting(title, startTime, endTime, recipients);
+    });
+}
+
+//Recorded Interview part
+function fetchRecordedInterviewResponses(callback) {
+    google.script.run.withSuccessHandler(function(data) {
+        console.log('Received data:', data); // Log received data
+        if (data) {
+            renderRecordedInterviewResponses(data);
+        } else {
+            console.error('No data received or error occurred.');
+        }
+    }).getRecordedInterviewResponses();
+    setTimeout(function() {
+          callback();
+      }, 2000);
+    }
+
+
+function fetchFinalStageInterview(callback) {
+      google.script.run.withSuccessHandler(renderfinalInterviewApplicants).getFinalInterviewApplicants();
+      setTimeout(function() {
+          callback();
+      }, 2000);
+  }
+
+
+function renderRecordedInterviewResponses(candidates,responses) {
+      console.log('Rendering candidates:', candidates);
+      if (candidates && candidates.length > 0) {
+            const statusContainer = document.getElementById('recorded-interview-status-container');
+            statusContainer.innerHTML = ''; // Clear any existing content
+            
+
+            candidates.forEach(candidate => {
+                // Ensure that candidate is an array
+                if (typeof candidate === 'object' && candidate !== null) 
+                {
+                  const div = document.createElement('div');
+
+                  // Create Success and Reject buttons
+                  const successButton = document.createElement('button');
+                  successButton.textContent = 'Final Stage';
+                  successButton.className = 'decision-button proceed';
+
+                  const rejectButton = document.createElement('button');
+                  rejectButton.textContent = 'Reject';
+                  rejectButton.className = 'decision-button reject';
+
+                  successButton.addEventListener('click', () => {
+                  handleDoneRecordedInterviewDecision(candidate, 'Final Stage').then(() => {
+                      // Hide the button and show the text in a green container
+                      successButton.style.display = 'none';
+                      rejectButton.style.display = 'none'
+                      const successfulText = document.createElement('div');
+                      successfulText.textContent = 'Successful';
+                      successfulText.style.backgroundColor = '#90EE90';
+                      successfulText.style.color = 'white';
+                      successfulText.style.padding = '2px 5px'; // Smaller padding
+                      successfulText.style.borderRadius = '3px';
+                      successfulText.style.fontSize = '12px'; // Smaller font size
+                      div.appendChild(successfulText);
+                  });
+                  });
+                  rejectButton.addEventListener('click', () => {
+                  handleDoneRecordedInterviewDecision(candidate, 'Unsuccessful').then(() => {
+                      // Hide the button and show the text in a green container
+                      successButton.style.display = 'none';
+                      rejectButton.style.display = 'none'
+                      const rejectText = document.createElement('div');
+                      rejectText.textContent = 'Rejected';
+                      rejectText.style.backgroundColor = '#FFCCCB';
+                      rejectText.style.color = 'white';
+                      rejectText.style.padding = '2px 5px'; // Smaller padding
+                      rejectText.style.borderRadius = '3px';
+                      rejectText.style.fontSize = '12px'; // Smaller font size
+                      div.appendChild(rejectText);
+                  });
+              });       
+
+                  div.className = 'grid-item';
+                  div.innerHTML = `
+                    <p><strong>ID:</strong> ${candidate.id}</p>
+                    <p><strong>Name:</strong> ${candidate.name}</p>
+                    <p><strong>Status:</strong> ${candidate.applicationStatus}</p>
+                    <p><strong>Question 1:</strong> ${candidate.questions[0]}</p>
+                    <p><strong>Answer 1:</strong> ${candidate.answers[0]}</p>
+                    <p><strong>Feedback 1:</strong> ${candidate.feedback[0]}</p>
+                    <p><strong>Rating 1:</strong> ${candidate.rating[0]}</p>
+                    <p><strong>Question 2:</strong> ${candidate.questions[1]}</p>
+                    <p><strong>Answer 2:</strong> ${candidate.answers[1]}</p>
+                    <p><strong>Feedback 2:</strong> ${candidate.feedback[1]}</p>
+                    <p><strong>Rating 2:</strong> ${candidate.rating[1]}</p>
+                    <p><strong>Question 3:</strong> ${candidate.questions[2]}</p>
+                    <p><strong>Answer 3:</strong> ${candidate.answers[2]}</p>
+                    <p><strong>Feedback 3:</strong> ${candidate.feedback[2]}</p>
+                    <p><strong>Rating 3:</strong> ${candidate.rating[2]}</p>
+                    <p><strong>Question 4:</strong> ${candidate.questions[3]}</p>
+                    <p><strong>Answer 4:</strong> ${candidate.answers[3]}</p>
+                    <p><strong>Feedback 4:</strong> ${candidate.feedback[3]}</p>
+                    <p><strong>Rating 4:</strong> ${candidate.rating[3]}</p>
+                    <p><strong>Question 5:</strong> ${candidate.questions[4]}</p>
+                    <p><strong>Answer 5:</strong> ${candidate.answers[4]}</p>
+                    <p><strong>Feedback 5:</strong> ${candidate.feedback[4]}</p>
+                    <p><strong>Rating 5:</strong> ${candidate.rating[4]}</p>
+                    `;
+                  // Append the buttons to the div
+                  div.appendChild(successButton);
+                  div.appendChild(rejectButton);
+
+                  statusContainer.appendChild(div);
+                } else {
+                    console.error('Candidate data is not in expected format:', candidate);
+                }
+            });
+        }
+    }
+    function handleDoneRecordedInterviewDecision(applicant, decision) 
+    {
+      if (decision == 'Final Stage') 
+      {
+          google.script.run.parse_final_interview_applicant_data(applicant.id);
+      } 
+      else if (decision == 'Unsuccessful') 
+      {
+          google.script.run.send_unsuccessful_email(applicant.id);
+      }
+      return Promise.resolve();
+    } 
+</script>

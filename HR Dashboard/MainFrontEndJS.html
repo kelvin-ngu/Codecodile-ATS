@@ -1,0 +1,88 @@
+<script>
+  // Show applicant overview status
+  function showStatus() {
+      document.getElementById('screening-section').style.display = 'none';
+      document.getElementById('status-section').style.display = 'block';
+      document.getElementById('recorded-interview-section').style.display = 'none';
+      document.getElementById('finalStageInterview-section').style.display = 'none';
+
+      showLoading();
+      fetchApplicantsByStatus(function() {
+        hideLoading();
+      });
+    }
+
+  // Tab to screen applicant's skills and look at their CV
+  function showScreening() {
+      document.getElementById('screening-section').style.display = 'block';
+      document.getElementById('status-section').style.display = 'none';
+      document.getElementById('recorded-interview-section').style.display = 'none';
+      document.getElementById('finalStageInterview-section').style.display = 'none';
+
+      showLoading();
+      fetchAvailablePosition();
+      fetchApplicants(function() {
+        hideLoading();
+      });
+    }
+  
+  // Tab to show recorded interview results
+  function showRecordedInterviewResponses() {
+      document.getElementById('screening-section').style.display = 'none';
+      document.getElementById('status-section').style.display = 'none';
+      document.getElementById('recorded-interview-section').style.display = 'block';
+      document.getElementById('finalStageInterview-section').style.display = 'none';
+      // Fetch data when the page loads
+      
+      showLoading();
+      fetchRecordedInterviewResponses(function() {
+        hideLoading();
+      });
+    }
+
+
+  function showFinalStageInterview() {
+      document.getElementById('screening-section').style.display = 'none';
+      document.getElementById('status-section').style.display = 'none';
+      document.getElementById('recorded-interview-section').style.display = 'none';
+      document.getElementById('finalStageInterview-section').style.display = 'block';
+
+      showLoading();
+      fetchFinalStageInterview(function() {
+        hideLoading();
+      });
+    }
+
+function showLoading() {
+    document.getElementById('loading-overlay').style.display = 'flex';
+}
+
+function hideLoading() {
+    document.getElementById('loading-overlay').style.display = 'none';
+}
+
+
+function showActiveSidebar() {
+  var sidebarLinks = document.querySelectorAll('#base-sidebar a');
+  sidebarLinks[0].classList.add('active');
+  sidebarLinks.forEach(function (link) {
+      link.addEventListener('click', function () {
+          // Remove active class from all links
+          sidebarLinks.forEach(function (link) {
+              link.classList.remove('active');
+          });
+          // Add active class to the clicked link
+          this.classList.add('active');
+      });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    showStatus();
+    showActiveSidebar();
+});
+
+
+
+</script>
+

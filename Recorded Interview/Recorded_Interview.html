@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Interview Questions</title>
+  <!-- Include Bootstrap CSS -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #d4edda; /* Pale green background */
+    }
+    .container {
+      margin-top: 50px;
+    }
+    .white-container {
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .question-box {
+      padding: 20px;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      font-size: 24px;
+      font-weight: bold;
+      white-space: pre-wrap;
+      max-width: 100%; /* Ensures the box fits text length */
+      overflow-wrap: break-word;
+    }
+    .status {
+      margin-top: 20px;
+    }
+    .countdown {
+      font-size: 18px;
+      margin-top: 10px;
+    }
+    .btn {
+      margin: 10px 0;
+    }
+    .blue-container {
+      padding: 10px;
+      background-color: #e9ecef;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .finish-message {
+      text-align: center;
+      margin-top: 50px;
+      font-family: 'Courier New', Courier, monospace; 
+      font-weight: bold; 
+    }
+    .center-btn {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .side-panel {
+      display: none; /* Initially hidden */
+      position: fixed;
+      top: 50px;
+      right: 20px;
+      background-color: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 200px;
+      z-index: 1000;
+    }
+    .side-panel .question-status {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .side-panel .question-status span {
+      margin-left: 10px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .bulb {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background-color: red;
+    }
+    .bulb.green {
+      background-color: green;
+    }
+  </style>
+  <script>
+  let questions = [];
+  let currentQuestionIndex = 0;
+  let mediaRecorder;
+  let audioChunks = [];
+  let countdownTimer;
+  let preparationTime = 10; // 10 seconds for preparation
+  let recordingTime = 25; // 25 seconds for recording
+
+  function onLoad() 
+  {
+  // Initialize event listener for the Enter key in the applicant ID input field
+  document.getElementById('code').addEventListener('keypress', function (e)
+   {
+    if (e.key === 'Enter') {
+      saveApplicantId();
+    }
+  });
+  }
+
+
+  function saveApplicantId() 
+  {
+    let code = document.getElementById('code').value.trim();
+    if (code !== '') {
+      document.getElementById('applicantIdError').style.display = 'none';
+      document.getElementById('loading').style.display = 'block'; // Show loading indicator
+      
+      google.script.run.withSuccessHandler(function(response) {
+        if (response.success) 
+        {
+          applicantId = response.applicantId; // Store applicantId in global variable
+          google.script.run.withSuccessHandler(setQuestions).getQuestions(response.applicantId);
+        } 
+        else 
+        {
+          document.getElementById('loading').style.display = 'none'; // Hide loading indicator
+          document.getElementById('applicantIdError').innerText = response.message;
+          document.getElementById('applicantIdError').style.display = 'block';
+          document.getElementById('applicantIdContainer').style.display = 'block';
+        }
+      }).checkCodeAndGetApplicantId(code);
+    } 
+    else 
+    {
+      document.getElementById('loading').style.display = 'none'; // Hide loading indicator
+      document.getElementById('applicantIdError').innerText = 'Invalid Code.';
+      document.getElementById('applicantIdError').style.display = 'block';
+    }
+  }
+
+
+  function setQuestions(data) {
+    questions = data;
+    document.getElementById('sidePanel').style.display = 'block'; // Show side panel
+    document.getElementById('startInterviewButton').style.display = 'block';
+    document.getElementById('applicantIdContainer').style.display = 'none';
+
+    initializeSidePanel();
+  }
+
+  function startInterview() {
+    document.getElementById('startInterviewButton').style.display = 'none';
+    displayQuestion();
+  }
+
+  function displayQuestion() {
+    document.getElementById('status').innerText = ''; // Clear the status message
+    if (currentQuestionIndex < questions.length) {
+      document.getElementById('question').innerText = questions[currentQuestionIndex];
+      document.getElementById('question').style.display = 'block';
+      document.getElementById('countdown').innerText = `Preparation time: ${preparationTime} seconds`;
+      document.getElementById('skipContainer').style.display = 'block';
+      startPreparationCountdown();
+    } else {
+      document.body.innerHTML = "<div class='finish-message'><h1>Congratulations, you have finished the interview!</h1></div>";
+    }
+  }
+
+  function startPreparationCountdown() {
+    let timeLeft = preparationTime;
+    document.getElementById('countdown').style.color = ''; // Reset color
+    countdownTimer = setInterval(() => {
+      if (timeLeft < 5) {
+        document.getElementById('countdown').style.color = 'red';
+      }
+      document.getElementById('countdown').innerText = `Preparation time: ${timeLeft} seconds`;
+      timeLeft--;
+      if (timeLeft < 0) {
+        clearInterval(countdownTimer);
+        document.getElementById('countdown').innerText = '';
+        document.getElementById('skipContainer').style.display = 'none';
+        startRecording();
+      }
+    }, 1000);
+  }
+
+  function skipPreparation() {
+    clearInterval(countdownTimer);
+    document.getElementById('countdown').innerText = '';
+    document.getElementById('skipContainer').style.display = 'none';
+    startRecording();
+  }
+
+  function startRecording() {
+    if (currentQuestionIndex >= questions.length) return;
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = event => {
+          audioChunks.push(event.data);
+        };
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          audioChunks = [];
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = () => {
+            var base64data = reader.result.split(',')[1];
+            google.script.run.withSuccessHandler(function(response)
+             {
+                console.log('Server response:', response);
+             }).submitAnswer(currentQuestionIndex, base64data, applicantId);
+          };
+        };
+        mediaRecorder.start();
+
+
+        startRecordingCountdown();
+      });
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      clearInterval(countdownTimer);
+      document.getElementById('status').innerText = '';
+      document.getElementById('stopButton').style.display = 'none';
+      document.getElementById('countdown').innerText = ''; // Clear the countdown timer text
+      if (currentQuestionIndex < questions.length - 1) {
+        document.getElementById('nextButton').style.display = 'inline-block';
+      } else {
+        document.getElementById('finishButton').style.display = 'inline-block';
+      }
+    }
+  }
+
+  function startRecordingCountdown() {
+    let timeLeft = recordingTime;
+    document.getElementById('countdown').style.color = ''; // Reset color
+    document.getElementById('stopButton').style.display = 'inline-block';
+    document.getElementById('status').innerText = 'Recording...';
+    countdownTimer = setInterval(() => {
+      if (timeLeft < 5) {
+        document.getElementById('countdown').style.color = 'red';
+      }
+      document.getElementById('countdown').innerText = `Recording time: ${timeLeft} seconds`;
+      timeLeft--;
+      if (timeLeft < 0) {
+        clearInterval(countdownTimer);
+        stopRecording();
+      }
+    }, 1000);
+  }
+
+  function nextQuestion() {
+    currentQuestionIndex++;
+    document.getElementById('nextButton').style.display = 'none';
+    document.getElementById('status').innerText = ''; // Clear the status message
+    updateSidePanel(); // Update side panel bulb status
+    displayQuestion();
+  }
+
+
+  function finishInterview() {
+    google.script.run.rateAnswer(applicantId); 
+    google.script.run.send_completion_email(applicantId); 
+    document.body.innerHTML = `
+      <div class='white-container'>
+        <div class='finish-message'>
+          <h1>Congratulations, you have finished the interview!</h1>
+        </div>
+      </div>`;
+  }
+
+
+  function initializeSidePanel() {
+    const sidePanel = document.getElementById('sidePanel');
+    sidePanel.innerHTML = ''; // Clear previous side panel content
+    for (let i = 0; i < questions.length; i++) {
+      const questionStatus = document.createElement('div');
+      questionStatus.classList.add('question-status');
+      const bulb = document.createElement('div');
+      bulb.classList.add('bulb');
+      questionStatus.appendChild(bulb);
+      const questionText = document.createElement('span');
+      questionText.innerText = `Question ${i + 1}`;
+      questionStatus.appendChild(questionText);
+      sidePanel.appendChild(questionStatus);
+    }
+    document.getElementById('loading').style.display = 'none'; // Hide loading indicator
+  }
+
+  function updateSidePanel() {
+    const sidePanel = document.getElementById('sidePanel');
+    const bulbs = sidePanel.getElementsByClassName('bulb');
+    if (currentQuestionIndex > 0 && currentQuestionIndex <= bulbs.length) {
+      bulbs[currentQuestionIndex - 1].classList.add('green');
+    }
+  }
+</script>
+
+</head>
+<body onload="onLoad()">
+  <div class="container">
+    <div class="text-center">
+      <div class="white-container">
+        <h1>Recorded Interview Questions</h1>
+        <div id="applicantIdContainer">
+          <input type="text" id="code" placeholder="Enter Code">
+          <button id="enterButton" class="btn btn-primary" onclick="saveApplicantId()">Enter</button>
+        </div>
+        <div id="applicantIdError" class="alert alert-danger" style="display:none;"></div>
+        <div id="loading" style="display: none;">Loading...</div>
+        <div id="question" class="question-box" style="display:none;"></div>
+        <div id="countdown" class="countdown"></div>
+        <div id="skipContainer" class="blue-container text-center" style="display:none;">
+          <button id="skipButton" class="btn btn-info" onclick="skipPreparation()">Skip Preparation</button>
+        </div>
+        <button id="startInterviewButton" class="btn btn-primary" onclick="startInterview()" style="display:none;">Start Interview</button>
+        <button id="stopButton" class="btn btn-danger" onclick="stopRecording()" style="display:none;">Stop Recording</button>
+        <button id="nextButton" class="btn btn-success" onclick="nextQuestion()" style="display:none;">Next Question</button>
+        <button id="finishButton" class="btn btn-success" onclick="finishInterview()" style="display:none;">Finish</button>
+        <div id="status" class="status"></div>
+      </div>
+    </div>
+  </div>
+  <div id="sidePanel" class="side-panel"></div>
+</body>
+</html>
+

@@ -1,0 +1,361 @@
+<style>
+      body {
+        padding-top: 70px;
+        font-family: Arial, sans-serif;
+        color: #333;
+        background-color: #f4f4f4;
+      }
+
+      h1 {
+          text-align: center;
+          font-weight: bold;
+      }
+
+      .topbar {
+        background-color: #2E7D32;
+        font-weight: bold; 
+        font-size: 40px; 
+        color: white;
+        padding: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-bottom: 4px solid #b6f0a1; 
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        align-items: center; 
+      }
+
+      .topbar h1 {
+        margin: 0;
+      }
+
+      .heading-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .heading-container h1 {
+        margin: 0; /* Remove default margin if needed */
+      }
+
+
+      #base-sidebar {
+        height: 100%;
+        width: 250px;
+        color: white;
+        position: fixed;
+        top: 0;
+        left: 0;
+        background-color: #388E3C;
+        padding-top: 60px;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        border-right: 3px solid #b6f0a1;
+      }
+
+      #base-sidebar a {
+        padding: 15px;
+        margin: 10px;
+        text-decoration: none;
+        font-size: 18px;
+        color: white;
+        display: block;
+        transition: background-color 0.3s, transform 0.3s;
+        border-radius: 10px;
+      }
+
+      #base-sidebar a:hover {
+        background-color: #66BB6A; /* Medium shade of green */
+        transform: scale(1.05);
+      }
+
+      #base-sidebar a.active {
+        background-color: #2E7D32; /* Darker shade of green */
+        transform: scale(1); /* No transform for active state */
+      }
+
+      #base-sidebar a.active:hover {
+        background-color: #66BB6A; /* Medium shade of green */
+        transform: scale(1.05);
+      }
+
+      .content {
+        margin-left: 260px;
+        padding: 20px;
+      }
+
+      .grid-container {
+        display: flex;
+        flex-wrap: nowrap; /* Prevent wrapping to the next line */
+        overflow-x: auto; /* Enable horizontal scrolling */
+        gap: 20px; /* Adjust spacing between items */
+        padding: 10px; /* Add padding around the container */
+        background-color: #f4f4f4; /* Light gray background color */
+      }
+
+      .grid-item {
+        border: 1px solid #ccc;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: justify;
+        background-color: white;
+        transition: transform 0.3s, box-shadow 0.3s;
+        flex: 0 0 auto; /* Prevent item from shrinking or growing */
+        min-width: 300px; /* Set minimum width for items */
+        max-width: 400px;
+      }
+
+      .grid-item:hover {
+        transform: scale(1.01);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .icon {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        justify-content: space-between;
+      }
+
+      .sidebar {
+          width: 200px;
+          background-color: #f4f4f4;
+          padding: 20px;
+          margin-top: 28px;
+          height: 100vh;
+          box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+      }
+
+      .sidebar h2 {
+          font-weight: bold;
+          font-size: 20px;
+          margin-bottom: 10px;
+      }
+      
+      .sidebar a,
+      .sidebar b {
+        padding: 15px;
+        margin: 10px;
+        text-decoration: none;
+        font-size: 18px;
+        color: white;
+        display: block;
+        transition: background-color 0.3s, transform 0.3s;
+        border-radius: 10px;
+      }
+
+      .sidebar b {
+        background-color: #4CAF50;
+      }
+
+      .sidebar a:hover,
+      .sidebar b:hover {
+        background-color: #66BB6A; /* Medium shade of green */
+        transform: scale(1.05);
+      }
+
+      .filters {
+          margin-bottom: 20px;
+      }
+
+      .section {
+          margin-bottom: 20px;
+      }
+
+      .section h3 {
+          font-weight: bold;
+          font-size: 16px;
+          margin-bottom: 10px;
+      }
+
+      .section label {
+          display: block;
+          margin-bottom: 5px;
+      }
+
+      .applicant-content {
+          flex: 1;
+          padding: 20px;
+          width: 100%;
+      }
+
+      .screening-content {
+          display:flex;
+          width: 100%;
+
+      }
+
+      table {
+          width: 100%;
+          border-collapse: collapse;
+      }
+
+      th, td {
+          padding: 10px;
+          border: 1px solid #ddd;
+          text-align: left;
+      }
+
+      th {
+          background-color: #f2f2f2;
+      }
+
+      td {
+        font-weight: normal;
+      }
+
+      .cv-button {
+          background-color: #4CAF50;
+          color: white;
+          border: none;
+          padding: 5px 10px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 14px;
+          margin: 4px 2px;
+          cursor: pointer;
+          border-radius: 4px;
+          transition: transform 0.6s;
+      }
+
+      .cv-button:hover {
+          background-color: #45a049;
+          transform: scale(1.1);
+      }
+
+      .schedule_interview_Button {
+          background-color: #4CAF50;
+          color: white;
+          border: none;
+          padding: 5px 10px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 14px;
+          margin: 4px 2px;
+          cursor: pointer;
+          border-radius: 4px;
+      }
+
+      .schedule_interview_Button:hover {
+          background-color: #45a049;
+      }
+
+
+      .feedback-button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 14px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 4px;
+      }
+
+      .feedback-button:hover {
+          background-color: #45a049;
+      }
+
+
+      .decision-button {
+          background-color: #2196F3;
+          color: white;
+          border: none;
+          padding: 5px 10px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 14px;
+          margin: 4px 2px;
+          cursor: pointer;
+          border-radius: 4px;
+          transition: transform 0.6s;
+      }
+
+      .decision-button.proceed {
+          background-color: #4CAF50;
+      }
+
+      .decision-button.proceed:hover {
+          background-color: #45a049;
+          transform: scale(1.1);
+      }
+
+      .decision-button.reject {
+          background-color: #f44336;
+      }
+
+      .decision-button.reject:hover {
+        background-color: #d32f2f;
+        transform: scale(1.1);
+      }
+
+      .decision-button:active {
+        transform: scale(0.9);
+      }
+
+      .loading-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(255, 255, 255, 0.8);
+          z-index: 9999;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          display: none; /* Hidden by default */
+      }
+
+      .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgb(0, 0, 0);
+      background-color: rgba(0, 0, 0, 0.4);
+      padding-top: 60px;
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 5% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 600px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .email-list {
+      list-style-type: none;
+      padding: 0;
+    }
+    .email-list li {
+      background-color: #f1f1f1;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    </style>
