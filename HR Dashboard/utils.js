@@ -233,7 +233,8 @@ function decodeBase64ToBlob(base64String, contentType) {
 
 
 function transcribeAudio(base64Audio) {
-  var apiKey = 'AIzaSyDVu2nSfe7Cdgq3d_vjtcE412iGTxRysiQ'; // Replace with your Google Cloud API key
+  const properties = PropertiesService.getScriptProperties().getProperties();
+  const apiKey = properties['GOOGLE_API_KEY'];
   
   // Decode the base64 audio data
   var audioBlob = decodeBase64ToBlob(base64Audio, 'audio/wav'); // Adjust contentType as needed
